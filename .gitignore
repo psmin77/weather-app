@@ -4,3 +4,4 @@
 node_modules/
 dist/
 Vue3_WeatherApp-master/
+.env
