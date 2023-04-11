@@ -129,7 +129,6 @@
   <style lang="scss" scoped>
   @import '~/scss/main.scss';
   
-  
   .leftContainer {
       width: 324px;
       min-width: 324px;
