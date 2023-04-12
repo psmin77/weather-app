@@ -9,16 +9,16 @@
       <div id="contentsBox">
           <div class="buttonBox">
               <div class="buttonBackground">
-                  <button class="forecast">forecast</button>
-                  <button class="airquality">airquality</button>
+                  <button class="forecast">Forecast</button>
+                  <button class="airquality">Air Quality</button>
               </div>
           </div>
           <div class="weatherBox">
               <div class="weatherDegree">
-                  <p>{{ Math.round(currentTemp) }}&deg;</p>
+                  <p>{{ currentTemp }}&deg;</p>
               </div>
               <div class="weatherIcon">
-                  <img src="~/assets/01d.png" alt="MainLogo" />
+                  <img :src="hourly[0].image" alt="MainLogo" />
               </div>
               <div class="weatherData">
                   <div v-for="data in currentData" :key="data.title" class="detailData">
@@ -34,16 +34,16 @@
               <p>이번주 날씨 보기</p>
           </div>
           <div class="timelyWeatherBox">
-              <div class="timelyWeather" v-for="h in hourly" :key="h.time">
+              <div class="timelyWeather" v-for="(data, index) in hourly" :key="index">
                   <div class="icon">
-                      <img src="~/assets/01d.png" alt="" />
+                      <img :src="data.image" alt="" />
                   </div>
                   <div class="data">
-                      <p class="time">{{ unixTimestamp(h.time) }}</p>
-                      <p class="currentDegree">{{ h.temp }}</p>
+                      <p class="time">{{ unixTimestamp(data.time) }}</p>
+                      <p class="currentDegree">{{ data.temp }}</p>
                       <div>
-                          <img src="~/assets/drop.png" alt="" />
-                          <p class="fail">{{ h.humidity }}</p>
+                          <img src="~/assets/images/drop.png" alt="" />
+                          <p class="fail">{{ data.humidity }}</p>
                       </div>
                   </div>
               </div>
@@ -59,70 +59,66 @@
   </template>
   
   <script>
-  import axios from "axios";
   import dayjs from "dayjs";
   import "dayjs/locale/ko";
   dayjs.locale("ko");
   
   export default {
-      data() {
-          return {
-              cityName: "",
-              currentTime: dayjs().format("YYYY. MM. DD. ddd"),
-              currentTemp: [],
-              currentData: [{
-                  title: "습도",
-                  value: "88%",
-              },
-              {
-                  title: "풍속",
-                  value: "88m/s",
-              },
-              {
-                  title: "체감온도",
-                  value: "20.0도",
-              }],
-              hourly: [
-                  // time: "",
-                  // temp: "",
-                  // humidity: ""
-              ]
-          }
-      },
-      created() {
-          // https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={lon}&exclude={part}&appid={API key}
-          // http://api.openweathermap.org/data/2.5/forecast?id=524901&appid={API key}
-          const API_KEY = process.env.VUE_APP_API_KEY;
-          axios
-              .get(`https://api.openweathermap.org/data/2.5/forecast?id=1835848&appid=${API_KEY}&units=metric`)
-              .then(resp => {
-                  this.cityName = resp.data.city.name; // 지역
-  
-                  const current = resp.data.list[0];
-                  this.currentTemp = current.main.temp; // 온도
-                  this.currentData[0].value = current.main.humidity + "%"; // 습도
-                  this.currentData[1].value = current.wind.speed + "m/s"; // 풍속
-                  this.currentData[2].value = Math.round(current.main.feels_like) + "도"; // 체감온도
-  
-                  // 시간대별 날씨 정보
-                  const arrHourly = resp.data.list;
-                  arrHourly.forEach(hour => {
-                      let data = { time:"", temp:"", humidity:"" };
-                      data.time = hour.dt
-                      data.temp = Math.round(hour.main.temp) + "도";
-                      data.humidity = hour.main.humidity + "%"
-                      this.hourly.push(data);
-                  });
-              })
-              .catch(error => console.log(error));
-      },
-      methods: {
-          unixTimestamp(dt) {
-              let date = new Date(dt * 1000);
-              let hour = "0" + date.getHours();
-              return hour.substr(-2) + "시";
-          }
-      }
+    data() {
+        return {
+            currentTime: dayjs().format("YYYY. MM. DD. ddd")
+        }
+    },
+    async created() {
+        // Vuex store의 Mutations -> commit()
+        // Vuex store의 Actions -> dispatch()
+        await this.$store.dispatch('openWeatherApi/FETCH_OPENWEATHER_API');
+        const { currentTemp, currentHumidity, currentWindSpeed, currentFeelsLike } = 
+            this.$store.state.openWeatherApi.currentWeather;
+        this.currentTemp = currentTemp; // 온도
+        this.currentData[0].value = currentHumidity + "%"; // 습도
+        this.currentData[1].value = currentWindSpeed + "m/s"; // 풍속
+        this.currentData[2].value = currentFeelsLike + "도"; // 체감 온도
+        this.hourly = this.$store.state.openWeatherApi.hourlyWeather;
+    },
+    computed: {
+        cityName() {
+            return this.$store.state.openWeatherApi.cityName;
+        },
+        currentTemp() {
+            const { currentTemp } = this.$store.state.openWeatherApi.currentWeather;
+            return currentTemp;
+        },
+        currentData() {
+            const { currentHumidity, currentWindSpeed, currentFeelsLike } = this.$store.state.openWeatherApi.currentWeather;
+            return [{
+                title: "습도",
+                value: currentHumidity + "%",
+            },
+            {
+                title: "풍속",
+                value: currentWindSpeed + "m/s",
+            },
+            {
+                title: "체감 온도",
+                value: currentFeelsLike + "도",
+            }]
+        },
+        hourly() {
+            // time: "",
+            // temp: "",
+            // humidity: "",
+            // image: ""
+            return this.$store.state.openWeatherApi.hourlyWeather;
+        }
+    },
+    methods: {
+        unixTimestamp(dt) {
+            let date = new Date(dt * 1000);
+            let hour = "0" + date.getHours();
+            return hour.substr(-2) + "시";
+        }
+    }
   }
   </script>
   
